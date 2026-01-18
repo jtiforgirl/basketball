@@ -402,7 +402,13 @@ async function renderSchedule() {
       <tbody>
   `;
 
-  data.forEach(r => html += `<tr>${r.map(x => `<td>${x}</td>`).join("")}</tr>`);
+  data.forEach(r => {
+    const row = [...r];
+    row[0] = formatDateYYYYMMDD(row[0]); // ⭐ 只格式化「日期欄位」
+    row[1] = formatTimeMMSS(row[1]);     // ⭐ 時間
+    html += `<tr>${row.map(x => `<td>${x}</td>`).join("")}</tr>`;
+});
+
   html += `</tbody></table>`;
 
   document.getElementById("contentArea").innerHTML = html;
@@ -417,11 +423,26 @@ function filterByMonth() {
 
   window.fullSchedule.forEach(r => {
     if (m === "all" || toYYYYMM(r[0]) === m) {
-      tbody.innerHTML += `<tr>${r.map(x => `<td>${x}</td>`).join("")}</tr>`;
+      const row = [...r];                 // ⭐ 複製一份資料
+      row[0] = formatDateYYYYMMDD(row[0]); // ⭐ 日期格式化
+      row[1] = formatTimeMMSS(row[1]);     // ⭐ 時間
+      tbody.innerHTML += `<tr>${row.map(x => `<td>${x}</td>`).join("")}</tr>`;
     }
   });
 }
 
+
+// ⭐ 日期格式化：YYYYMMDD → YYYY/MM/DD
+function formatDateYYYYMMDD(dateStr) {
+  if (!dateStr || dateStr.length !== 8) return dateStr;
+  return `${dateStr.slice(0,4)}/${dateStr.slice(4,6)}/${dateStr.slice(6,8)}`;
+}
+
+// ⭐ 時間格式化：mmSS → mm:SS
+function formatTimeMMSS(timeStr) {
+  if (!timeStr || timeStr.length !== 4) return timeStr;
+  return `${timeStr.slice(0,2)}:${timeStr.slice(2,4)}`;
+}
 
 
 // ====================================================================
@@ -585,7 +606,13 @@ function filterTeam() {
       <tbody>
   `;
 
-  rows.forEach(r => html += `<tr>${r.map(x => `<td>${x}</td>`).join("")}</tr>`);
+  rows.forEach(r => {
+    const row = [...r];
+    row[0] = formatDateYYYYMMDD(row[0]); // ⭐ 日期格式化
+    row[1] = formatTimeMMSS(row[1]);     // ⭐ 時間
+    html += `<tr>${row.map(x => `<td>${x}</td>`).join("")}</tr>`;
+  });
+
 
   html += `</tbody></table>`;
   result.innerHTML = html;
@@ -703,7 +730,6 @@ async function loadHistorySeason() {
 
 // ⭐ 預設顯示最新消息
 renderNews();
-
 
 </script>
 
