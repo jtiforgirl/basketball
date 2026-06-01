@@ -395,8 +395,8 @@ async function renderSchedule() {
 
   data.sort((a, b) => parseDate(a[0]) - parseDate(b[0]));
 
-  const months = [...new Set(data.map(r => toYYYYMM(r[0])))];
-  const groups = [...new Set(data.map(r => r[3]))];
+  const months = [...new Set(data.map(r => toYYYYMM(r[0])))].sort();
+  const groups = [...new Set(data.map(r => r[3]))].sort();
 
   let html = `
   <h3>賽程表</h3>
