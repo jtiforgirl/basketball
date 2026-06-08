@@ -566,7 +566,7 @@ async function renderStanding() {
     const winner = r[WINNER].trim();
     if (!winner) { // 如果勝隊欄位為空、null、undefined，則跳過此場比賽
       return; // 繼續下一個迴圈
-    }else if(g != 'A組' || g != 'B組' || g != 'C組'){
+    }else if(g != 'A組' & g != 'B組' & g != 'C組'){
       return; // 繼續下一個迴圈
     }
 
