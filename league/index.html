@@ -89,6 +89,36 @@
 
     h3 { margin-top: 0; }
 
+    /* ===== 本周賽程 ===== */
+    .weekly-schedule {
+      margin: 0 0 20px 0;
+      padding: 15px;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+    }
+
+    .weekly-schedule-title {
+      margin: 0 0 10px 0;
+      font-size: 20px;
+    }
+
+    .weekly-schedule-date {
+      margin-bottom: 10px;
+      color: #666;
+      font-size: 14px;
+    }
+
+    .weekly-schedule table {
+      margin-top: 0;
+    }
+
+    .weekly-empty {
+      padding: 10px 0;
+      color: #666;
+    }
+
+
     /* 🌟 最新消息列表樣式 */
     .news-item {
         padding: 10px;
@@ -387,7 +417,6 @@ function parseDate(d) {
 async function renderSchedule() {
   const rows = await fetchCSV();
   const headers = rows[0];
-  const SHOW = 8;
 
   let data = rows.slice(1)
     .filter(r => r.length > 1)
@@ -398,13 +427,73 @@ async function renderSchedule() {
   const months = [...new Set(data.map(r => toYYYYMM(r[0])))].sort();
   const groups = [...new Set(data.map(r => r[3]))].sort();
 
-  let html = `
-  <h3>賽程表</h3>
+  // ===== 本周賽程：抓「本週日」的日期 =====
+  // 例如今天是 2026/9/16（三），就會抓 2026/9/20（日）
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
-  <label>
-  月份：
-  <select id="monthFilter" onchange="filterSchedule()">
-    <option value="all">全部</option>
+  const dayOfWeek = today.getDay(); // 星期日 = 0
+  const daysUntilSunday = (7 - dayOfWeek) % 7;
+
+  const thisSunday = new Date(today);
+  thisSunday.setDate(today.getDate() + daysUntilSunday);
+
+  const sundayYYYYMMDD =
+    thisSunday.getFullYear().toString() +
+    String(thisSunday.getMonth() + 1).padStart(2, "0") +
+    String(thisSunday.getDate()).padStart(2, "0");
+
+  const weeklyData = data.filter(r => r[0] === sundayYYYYMMDD);
+
+  let weeklyHtml = `
+    <div class="weekly-schedule">
+      <h3 class="weekly-schedule-title">🏀 本周賽程</h3>
+      <div class="weekly-schedule-date">
+        ${formatDateYYYYMMDD(sundayYYYYMMDD)}
+      </div>
+  `;
+
+  if (weeklyData.length === 0) {
+    weeklyHtml += `<div class="weekly-empty">本周日目前沒有賽程。</div>`;
+  } else {
+    weeklyHtml += `
+      <table>
+        <thead>
+          <tr>
+            ${[0,1,2,3,4,5].map(i => `<th>${headers[i]}</th>`).join("")}
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    weeklyData.forEach(r => {
+      const row = [...r];
+      row[0] = formatDateYYYYMMDD(row[0]);
+      row[1] = formatTimeMMSS(row[1]);
+
+      weeklyHtml += `
+        <tr>
+          ${[0,1,2,3,4,5].map(i => `<td>${row[i]}</td>`).join("")}
+        </tr>
+      `;
+    });
+
+    weeklyHtml += `
+        </tbody>
+      </table>
+    `;
+  }
+
+  weeklyHtml += `</div>`;
+
+  // ===== 原本的大賽程表，完整保留 =====
+  let html = `
+    <h3>賽程表</h3>
+
+    <label>
+      月份：
+      <select id="monthFilter" onchange="filterSchedule()">
+        <option value="all">全部</option>
   `;
 
   months.forEach(m => {
@@ -412,13 +501,13 @@ async function renderSchedule() {
   });
 
   html += `
-  </select>
-  </label>
+      </select>
+    </label>
 
-  <label style="margin-left:15px;">
-  組別：
-  <select id="groupFilter" onchange="filterSchedule()">
-    <option value="all">全部</option>
+    <label style="margin-left:15px;">
+      組別：
+      <select id="groupFilter" onchange="filterSchedule()">
+        <option value="all">全部</option>
   `;
 
   groups.forEach(g => {
@@ -426,11 +515,12 @@ async function renderSchedule() {
   });
 
   html += `
-  </select>
-  </label>
+      </select>
+    </label>
   `;
 
   const DISPLAY_COLUMNS = [0,1,2,3,4,5,6,7];
+
   html += `
     <table id="scheduleTable">
       <thead>
@@ -443,18 +533,20 @@ async function renderSchedule() {
 
   data.forEach(r => {
     const row = [...r];
-    row[0] = formatDateYYYYMMDD(row[0]); // ⭐ 只格式化「日期欄位」
-    row[1] = formatTimeMMSS(row[1]);     // ⭐ 時間
+    row[0] = formatDateYYYYMMDD(row[0]);
+    row[1] = formatTimeMMSS(row[1]);
+
     html += `
       <tr>
         ${DISPLAY_COLUMNS.map(i => `<td>${row[i]}</td>`).join("")}
       </tr>
     `;
-});
+  });
 
   html += `</tbody></table>`;
 
-  document.getElementById("contentArea").innerHTML = html;
+  // 本周賽程放在大賽程表上方
+  document.getElementById("contentArea").innerHTML = weeklyHtml + html;
 
   window.fullSchedule = data;
 }
