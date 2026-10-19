@@ -886,7 +886,7 @@ async function loadHistorySeasonList() {
     loadHistorySeason();
 }
 
-// 顯示特定賽季的 A、B 組成績
+// 顯示特定賽季成績：支援 A 組、B 組，或整季戰績
 async function loadHistorySeason() {
     const seasonKey = document.getElementById("historySelect").value;
 
@@ -894,20 +894,21 @@ async function loadHistorySeason() {
     const text = await res.text();
 
     const rows = text.split(/\r?\n/).map(r => r.split(","));
-    const headers = rows[0].slice(1); // ❗不顯示排序碼欄
+    const headers = rows[0].slice(1); // 不顯示排序碼欄
     const data = rows.slice(1).filter(r => r.length > 1);
 
     // 篩選該賽季（用排序碼）
     const filtered = data.filter(r => r[0] === seasonKey);
 
-    // A / B 組
-    const A = filtered.filter(r => r[2] === "A組");
-    const B = filtered.filter(r => r[2] === "B組");
+    // 依「組別」欄位分類；支援 A組、B組，也支援「整季」
+    const groupValues = [...new Set(filtered.map(r => (r[2] || "").trim()).filter(Boolean))];
+    const knownGroups = ["A組", "B組"];
+    const hasGroup = group => filtered.some(r => (r[2] || "").trim() === group);
 
     let html = "";
 
-    function makeTable(title, rows) {
-        if (rows.length === 0) return "";
+    function makeTable(title, tableRows) {
+        if (tableRows.length === 0) return "";
 
         return `
             <h3>${title}</h3>
@@ -916,21 +917,36 @@ async function loadHistorySeason() {
                     <tr>${headers.map(h => `<th>${h}</th>`).join("")}</tr>
                 </thead>
                 <tbody>
-                    ${rows
-                        .map(r => `
-                            <tr>
-                                ${r.slice(1).map(x => `<td>${x}</td>`).join("")}
-                            </tr>
-                        `)
-                        .join("")}
+                    ${tableRows.map(r => `
+                        <tr>
+                            ${r.slice(1).map(x => `<td>${x ?? ""}</td>`).join("")}
+                        </tr>
+                    `).join("")}
                 </tbody>
             </table>
             <br>
         `;
     }
 
-    html += makeTable("A 組成績", A);
-    html += makeTable("B 組成績", B);
+    // 舊賽季：顯示 A 組、B 組；若資料只有其中一組，就只顯示有資料的組別
+    const A = filtered.filter(r => (r[2] || "").trim() === "A組");
+    const B = filtered.filter(r => (r[2] || "").trim() === "B組");
+
+    if (A.length > 0 || B.length > 0) {
+        html += makeTable("A 組成績", A);
+        html += makeTable("B 組成績", B);
+    }
+
+    // 新賽制：非 A組、B組的組別名稱（例如「整季」）各自顯示成績表
+    const otherGroups = groupValues.filter(g => !knownGroups.includes(g));
+    otherGroups.forEach(group => {
+        const groupRows = filtered.filter(r => (r[2] || "").trim() === group);
+        html += makeTable(group === "整季" ? "整季成績" : `${group}成績`, groupRows);
+    });
+
+    if (!html) {
+        html = "<p>這個賽季目前沒有可顯示的成績資料，請確認 Google 試算表的組別欄位。</p>";
+    }
 
     document.getElementById("historyResult").innerHTML = html;
 }
